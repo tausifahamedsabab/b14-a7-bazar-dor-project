@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "./components/Navbar";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
-  title: "বাজার দর | আজকের বাজারের দাম",
-  description: "বাংলাদেশের নিত্যপ্রয়োজনীয় পণ্যের দৈনিক বাজারদর",
+  title: "বাজার দর",
+  description: "প্রতিদিনের বাজারদর এক নজরে",
 };
 
 export default function RootLayout({
@@ -16,7 +17,10 @@ export default function RootLayout({
     <html lang="bn">
       <body className="min-h-screen bg-[#f0f5f0] text-[#202a22]">
         <Navbar />
+
         {children}
+
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   );

@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
+
+import UserMenu from "./auth/UserMenu";
 import CategoryNav from "./CategoryNav";
 import PriceTicker from "./PriceTicker";
-import { Suspense } from "react";
 
 export default function Navbar() {
   return (
@@ -32,21 +34,7 @@ export default function Navbar() {
           </div>
         </Link>
 
-        <div className="flex items-center gap-2 text-sm">
-          <Link
-            href="/sign-in"
-            className="rounded-lg px-3 py-2 font-medium hover:bg-green-50"
-          >
-            সাইন ইন
-          </Link>
-
-          <Link
-            href="/sign-up"
-            className="rounded-lg bg-green-700 px-3 py-2 font-semibold text-white transition hover:bg-green-800"
-          >
-            সাইন আপ
-          </Link>
-        </div>
+        <UserMenu />
       </div>
 
       <Suspense
@@ -54,6 +42,7 @@ export default function Navbar() {
       >
         <CategoryNav />
       </Suspense>
+
       <PriceTicker />
     </header>
   );
