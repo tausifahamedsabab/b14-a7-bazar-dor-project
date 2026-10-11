@@ -38,7 +38,7 @@ export default function PriceTicker() {
   if (products.length === 0) return null;
 
   return (
-    <div className="overflow-hidden border-t border-[#e8eee8] bg-white">
+    <div className="w-full overflow-hidden border-t border-[#e8eee8] bg-white">
       <div className="flex w-max animate-[ticker_35s_linear_infinite] items-center hover:[animation-play-state:paused]">
         {[...products, ...products].map((product, index) => {
           const down =

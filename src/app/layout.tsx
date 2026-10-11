@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "./components/Navbar";
-import { Toaster } from "sonner";
+import Footer from "./components/Footer";
+import { Suspense } from "react";
+import ToastProvider from "./components/ToastProvider";
 
 export const metadata: Metadata = {
   title: "বাজার দর",
@@ -15,12 +17,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="bn">
-      <body className="min-h-screen bg-[#f0f5f0] text-[#202a22]">
+      <body className="flex min-h-screen flex-col bg-[#f0f5f0] text-[#202a22]">
         <Navbar />
 
-        {children}
+        <main className="flex w-full flex-1 flex-col">{children}</main>
 
-        <Toaster position="top-right" richColors closeButton />
+        <Footer />
+
+        <Suspense fallback={null}>
+          <ToastProvider />
+        </Suspense>
       </body>
     </html>
   );
