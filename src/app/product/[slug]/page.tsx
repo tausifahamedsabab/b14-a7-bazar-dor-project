@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 export const instant = false;
 
+
 const API_URL = "https://openapi.programming-hero.com/api/bazardor";
 
 type Market = {
