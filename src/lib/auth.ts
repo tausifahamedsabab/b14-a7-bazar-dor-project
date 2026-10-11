@@ -1,9 +1,6 @@
 import { betterAuth } from "better-auth";
-import Database from "better-sqlite3";
-import path from "node:path";
-
-const databasePath = path.join(process.cwd(), "sqlite.db");
-const database = new Database(databasePath);
+import { mongodbAdapter } from "@better-auth/mongo-adapter";
+import { client, db } from "@/lib/mongodb";
 
 export const auth = betterAuth({
   appName: "Bazar Dor",
@@ -12,7 +9,7 @@ export const auth = betterAuth({
 
   secret: process.env.BETTER_AUTH_SECRET,
 
-  database,
+  database: mongodbAdapter(db, { client }),
 
   emailAndPassword: {
     enabled: true,
@@ -24,6 +21,7 @@ export const auth = betterAuth({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     },
+
     github: {
       clientId: process.env.GITHUB_CLIENT_ID || "",
       clientSecret: process.env.GITHUB_CLIENT_SECRET || "",

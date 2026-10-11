@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
-export const instant = false;
 
 const API_URL = "https://openapi.programming-hero.com/api/bazardor";
 
@@ -32,12 +31,14 @@ type Product = {
 };
 
 type ProductSummary = {
-  slug: string;
   id: number | string;
+  slug: string;
 };
 
 function getList(data: unknown): ProductSummary[] {
-  if (Array.isArray(data)) return data as ProductSummary[];
+  if (Array.isArray(data)) {
+    return data as ProductSummary[];
+  }
 
   if (data && typeof data === "object") {
     const body = data as Record<string, unknown>;
@@ -55,7 +56,6 @@ function getList(data: unknown): ProductSummary[] {
 }
 
 async function getProduct(slug: string): Promise<Product | null> {
-  // First find the product ID using its slug.
   const listResponse = await fetch(`${API_URL}/products`, {
     cache: "no-store",
   });
@@ -67,15 +67,13 @@ async function getProduct(slug: string): Promise<Product | null> {
   const listData: unknown = await listResponse.json();
   const products = getList(listData);
 
-  const selectedProduct = products.find((product) => product.slug === slug);
+  const selected = products.find((item) => item.slug === slug);
 
-  if (!selectedProduct) return null;
+  if (!selected) return null;
 
-  // Fetch the complete details using the product ID.
-  const detailResponse = await fetch(
-    `${API_URL}/products/${selectedProduct.id}`,
-    { cache: "no-store" },
-  );
+  const detailResponse = await fetch(`${API_URL}/products/${selected.id}`, {
+    cache: "no-store",
+  });
 
   if (!detailResponse.ok) {
     throw new Error("Product details API request failed");
@@ -83,16 +81,20 @@ async function getProduct(slug: string): Promise<Product | null> {
 
   const result: unknown = await detailResponse.json();
 
-  if (!result || typeof result !== "object") return null;
+  if (!result || typeof result !== "object") {
+    return null;
+  }
 
   const body = result as Record<string, unknown>;
 
-  // The detail endpoint returns a product object directly.
-  const product = (
-    body.data && typeof body.data === "object" ? body.data : result
-  ) as Product;
+  const rawProduct =
+    body.data && typeof body.data === "object" ? body.data : result;
 
-  if (product.id == null || !product.nameBn) return null;
+  const product = rawProduct as Product;
+
+  if (product.id == null || !product.nameBn) {
+    return null;
+  }
 
   return product;
 }
@@ -119,19 +121,29 @@ function getUnit(unit: string) {
 function PriceCard({
   title,
   price,
-  icon,
+  description,
+  color = "normal",
 }: {
   title: string;
   price: number;
-  icon: string;
+  description: string;
+  color?: "normal" | "green" | "red";
 }) {
+  const styles = {
+    normal: "border-gray-200 bg-white text-[#253027]",
+    green: "border-green-200 bg-green-50 text-green-800",
+    red: "border-red-200 bg-red-50 text-red-800",
+  };
+
   return (
-    <div className="rounded-xl border border-[#e3eae3] bg-white p-4 sm:p-5">
-      <p className="text-sm text-gray-500">{title}</p>
-      <p className="mt-3 text-xl font-extrabold text-[#253027] sm:text-2xl">
+    <div className={`rounded-2xl border p-5 shadow-sm ${styles[color]}`}>
+      <p className="text-sm font-medium opacity-80">{title}</p>
+
+      <p className="mt-3 text-2xl font-extrabold sm:text-3xl">
         {money(price)} টাকা
       </p>
-      <p className="mt-1 text-xs text-gray-500">{icon}</p>
+
+      <p className="mt-2 text-xs opacity-75">{description}</p>
     </div>
   );
 }
@@ -153,25 +165,34 @@ export default async function ProductDetailsPage({
 
   if (!product) notFound();
 
-  const markets = product.markets ?? [];
+  const markets = Array.isArray(product.markets)
+    ? product.markets.filter(
+        (market) =>
+          Number.isFinite(Number(market.min)) &&
+          Number.isFinite(Number(market.max)),
+      )
+    : [];
 
   const minimumPrice =
     markets.length > 0
-      ? Math.min(...markets.map((market) => market.min))
-      : product.today;
+      ? Math.min(...markets.map((market) => Number(market.min)))
+      : Number(product.today) || 0;
 
   const maximumPrice =
     markets.length > 0
-      ? Math.max(...markets.map((market) => market.max))
-      : product.today;
+      ? Math.max(...markets.map((market) => Number(market.max)))
+      : Number(product.today) || 0;
 
-  // Average of all market minimum and maximum prices.
-  const allPrices = markets.flatMap((market) => [market.min, market.max]);
+  // Calculate the average of all market minimum and maximum prices.
+  const allPrices = markets.flatMap((market) => [
+    Number(market.min),
+    Number(market.max),
+  ]);
 
   const averagePrice =
     allPrices.length > 0
       ? allPrices.reduce((total, price) => total + price, 0) / allPrices.length
-      : product.today;
+      : Number(product.today) || 0;
 
   const direction = product.change?.dir?.toLowerCase();
   const priceIncreased = direction === "up" || direction === "▲";
@@ -179,27 +200,25 @@ export default async function ProductDetailsPage({
   const priceDecreased = direction === "down" || direction === "▼";
 
   const changeColor = priceIncreased
-    ? "text-red-600 bg-red-50"
+    ? "bg-red-50 text-red-600"
     : priceDecreased
-      ? "text-green-700 bg-green-50"
-      : "text-gray-600 bg-gray-100";
+      ? "bg-green-50 text-green-700"
+      : "bg-gray-100 text-gray-600";
 
   return (
     <main className="min-h-screen bg-[#f0f5f0] px-3 py-6 sm:px-5 sm:py-8">
       <div className="mx-auto max-w-6xl space-y-6">
-        {/* Product summary */}
-        <section className="rounded-2xl border border-[#e3eae3] bg-[#fafcf9] p-5 sm:p-8">
+        {/* Product information */}
+        <section className="rounded-2xl border border-[#e3eae3] bg-white p-5 shadow-sm sm:p-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-            <div className="relative flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#e3eae3] bg-white p-3 sm:h-40 sm:w-40">
-              {product.image &&
-              (product.image.startsWith("https://") ||
-                product.image.startsWith("http://")) ? (
+            <div className="relative flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-gray-100 bg-[#f5f8f5] p-3 sm:h-40 sm:w-40">
+              {product.image && /^https?:\/\//.test(product.image) ? (
                 <Image
                   src={product.image}
                   alt={product.nameBn}
                   fill
                   unoptimized
-                  sizes="(max-width: 640px) 128px, 160px"
+                  sizes="160px"
                   className="object-contain p-3"
                 />
               ) : (
@@ -208,7 +227,7 @@ export default async function ProductDetailsPage({
                   role="img"
                   aria-label={product.nameBn}
                 >
-                  {product.categoryIcon || "🛒"}
+                  {product.image || product.categoryIcon || "🛒"}
                 </span>
               )}
             </div>
@@ -229,23 +248,23 @@ export default async function ProductDetailsPage({
               </h1>
 
               <p className="mt-2 text-sm leading-6 text-gray-600">
-                {product.nameBn} — বিভিন্ন বাজারের আজকের দাম, সর্বনিম্ন ও
-                সর্বোচ্চ মূল্য এবং আগের সময়ের দামের তুলনা এক জায়গায় দেখুন।
+                বিভিন্ন বাজারের আজকের দাম, গড় দাম এবং আগের সময়ের দামের তুলনা এক
+                জায়গায় দেখুন।
               </p>
 
               <div className="mt-4 flex flex-wrap items-center gap-3">
-                <p className="text-sm text-gray-500">আজকের দাম</p>
+                <span className="text-sm text-gray-500">আজকের দাম</span>
 
-                <p className="text-2xl font-extrabold text-[#218b45]">
-                  {money(product.today)} টাকা
-                </p>
+                <span className="text-2xl font-extrabold text-green-700">
+                  {money(Number(product.today) || 0)} টাকা
+                </span>
 
                 {product.change && (
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-bold ${changeColor}`}
                   >
                     {priceIncreased ? "▲" : priceDecreased ? "▼" : "—"}{" "}
-                    {money(Math.abs(product.change.pct))}%
+                    {money(Math.abs(Number(product.change.pct) || 0))}%
                   </span>
                 )}
               </div>
@@ -255,33 +274,41 @@ export default async function ProductDetailsPage({
 
         {/* Price summary */}
         <section>
-          <h2 className="mb-4 text-lg font-extrabold text-[#253027]">
+          <h2 className="mb-4 text-xl font-extrabold text-[#253027]">
             দামের সারসংক্ষেপ
           </h2>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <PriceCard
               title="সর্বনিম্ন দাম"
               price={minimumPrice}
-              icon="↓ বাজারের সবচেয়ে কম দাম"
+              description="↓ বাজারের সবচেয়ে কম দাম"
+              color="green"
             />
 
             <PriceCard
               title="সর্বোচ্চ দাম"
               price={maximumPrice}
-              icon="↑ বাজারের সবচেয়ে বেশি দাম"
+              description="↑ বাজারের সবচেয়ে বেশি দাম"
+              color="red"
             />
 
             <PriceCard
               title="গড় দাম"
               price={averagePrice}
-              icon="◎ সব বাজারের দামের গড়"
+              description="◎ সব বাজারের দামের গড়"
+              color="green"
             />
           </div>
+
+          <p className="mt-3 text-xs leading-5 text-gray-500">
+            গড় দাম = প্রতিটি বাজারের সর্বনিম্ন ও সর্বোচ্চ দাম যোগ করে মোট দামের
+            সংখ্যা দিয়ে ভাগ।
+          </p>
         </section>
 
-        {/* Historical prices */}
-        <section className="rounded-2xl border border-[#e3eae3] bg-white p-5 sm:p-6">
+        {/* Previous prices */}
+        <section className="rounded-2xl border border-[#e3eae3] bg-white p-5 shadow-sm sm:p-6">
           <h2 className="mb-4 text-lg font-extrabold text-[#253027]">
             আগের সময়ের দাম
           </h2>
@@ -297,7 +324,7 @@ export default async function ProductDetailsPage({
                 <p className="text-xs text-gray-500">{item.label}</p>
 
                 <p className="mt-2 font-bold text-gray-900">
-                  {money(item.price)} টাকা
+                  {money(Number(item.price) || 0)} টাকা
                 </p>
               </div>
             ))}
@@ -305,7 +332,7 @@ export default async function ProductDetailsPage({
         </section>
 
         {/* Market prices */}
-        <section className="overflow-hidden rounded-2xl border border-[#e3eae3] bg-white">
+        <section className="overflow-hidden rounded-2xl border border-[#e3eae3] bg-white shadow-sm">
           <div className="border-b border-gray-100 p-5 sm:p-6">
             <h2 className="text-lg font-extrabold text-[#253027]">
               বাজারভিত্তিক আজকের দাম
@@ -318,39 +345,49 @@ export default async function ProductDetailsPage({
 
           {markets.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[520px] text-left text-sm">
+              <table className="w-full min-w-[750px] text-left text-sm">
                 <thead className="bg-[#f5f8f5] text-gray-600">
                   <tr>
                     <th className="px-5 py-4 font-semibold">বাজারের নাম</th>
                     <th className="px-5 py-4 font-semibold">বিভাগ</th>
                     <th className="px-5 py-4 font-semibold">সর্বনিম্ন</th>
                     <th className="px-5 py-4 font-semibold">সর্বোচ্চ</th>
+                    <th className="px-5 py-4 font-semibold">গড় দাম</th>
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-gray-100">
-                  {markets.map((market, index) => (
-                    <tr
-                      key={`${market.market}-${index}`}
-                      className="transition hover:bg-green-50/50"
-                    >
-                      <td className="px-5 py-4 font-medium text-gray-800">
-                        {market.market}
-                      </td>
+                  {markets.map((market, index) => {
+                    const average =
+                      (Number(market.min) + Number(market.max)) / 2;
 
-                      <td className="px-5 py-4 text-gray-600">
-                        {market.division}
-                      </td>
+                    return (
+                      <tr
+                        key={`${market.market}-${index}`}
+                        className="transition hover:bg-green-50/50"
+                      >
+                        <td className="px-5 py-4 font-medium text-gray-800">
+                          {market.market}
+                        </td>
 
-                      <td className="px-5 py-4 font-semibold text-green-700">
-                        {money(market.min)} টাকা
-                      </td>
+                        <td className="px-5 py-4 text-gray-600">
+                          {market.division}
+                        </td>
 
-                      <td className="px-5 py-4 font-semibold text-gray-800">
-                        {money(market.max)} টাকা
-                      </td>
-                    </tr>
-                  ))}
+                        <td className="px-5 py-4 font-semibold text-green-700">
+                          {money(Number(market.min))} টাকা
+                        </td>
+
+                        <td className="px-5 py-4 font-semibold text-gray-800">
+                          {money(Number(market.max))} টাকা
+                        </td>
+
+                        <td className="px-5 py-4 font-extrabold text-green-800">
+                          {money(average)} টাকা
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
