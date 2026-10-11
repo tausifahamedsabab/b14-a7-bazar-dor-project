@@ -9,36 +9,31 @@ import type { Category, Product } from "../../components/navbar-types";
 const API_BASE = "https://openapi.programming-hero.com/api/bazardor";
 
 type SortOption = "default" | "asc" | "desc";
-
 type ApiRecord = Record<string, unknown>;
 
-// API response থেকে data বের করবে।
 function unwrapData(response: unknown): unknown {
   let current = response;
 
   for (let i = 0; i < 3; i++) {
-    if (current && typeof current === "object" && !Array.isArray(current)) {
-      const record = current as ApiRecord;
-
-      if ("data" in record) {
-        current = record.data;
-        continue;
-      }
+    if (
+      current &&
+      typeof current === "object" &&
+      !Array.isArray(current) &&
+      "data" in current
+    ) {
+      current = (current as ApiRecord).data;
+    } else {
+      break;
     }
-
-    break;
   }
 
   return current;
 }
 
-// API response থেকে product array বের করবে।
 function getProducts(response: unknown): Product[] {
   const data = unwrapData(response);
 
-  if (Array.isArray(data)) {
-    return data as Product[];
-  }
+  if (Array.isArray(data)) return data as Product[];
 
   if (data && typeof data === "object") {
     const record = data as ApiRecord;
@@ -53,7 +48,6 @@ function getProducts(response: unknown): Product[] {
   return [];
 }
 
-// বাংলা ও ইংরেজি সংখ্যা দুটোই number-এ convert করবে।
 function toNumber(value: number | string | undefined): number {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : 0;
@@ -69,12 +63,13 @@ function toNumber(value: number | string | undefined): number {
     .replace(/[^\d.-]/g, "");
 
   const number = Number(normalized);
-
   return Number.isFinite(number) ? number : 0;
 }
 
 function formatNumber(value: number | string | undefined): string {
-  return toNumber(value).toLocaleString("bn-BD");
+  return toNumber(value).toLocaleString("bn-BD", {
+    maximumFractionDigits: 2,
+  });
 }
 
 function getChange(product: Product) {
@@ -82,26 +77,16 @@ function getChange(product: Product) {
   const percentage = toNumber(product.change?.pct);
 
   if (direction === "up" || direction === "▲") {
-    return {
-      text: `▲ ${formatNumber(percentage)}%`,
-      type: "up",
-    };
+    return { text: `▲ ${formatNumber(percentage)}%`, type: "up" };
   }
 
   if (direction === "down" || direction === "▼") {
-    return {
-      text: `▼ ${formatNumber(percentage)}%`,
-      type: "down",
-    };
+    return { text: `▼ ${formatNumber(percentage)}%`, type: "down" };
   }
 
-  return {
-    text: "— ০%",
-    type: "same",
-  };
+  return { text: "— ০%", type: "same" };
 }
 
-// useParams অবশ্যই Suspense-এর ভিতরের component-এ থাকবে।
 function CategoryPageContent() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
@@ -138,13 +123,10 @@ function CategoryPageContent() {
         ]);
 
         if (!categoryResponse.ok || !productsResponse.ok) {
-          throw new Error(
-            `API request failed: ${categoryResponse.status}, ${productsResponse.status}`,
-          );
+          throw new Error("API request failed");
         }
 
         const categoryJson: unknown = await categoryResponse.json();
-
         const productsJson: unknown = await productsResponse.json();
 
         const categoryData = unwrapData(categoryJson);
@@ -167,9 +149,7 @@ function CategoryPageContent() {
         setCategory(foundCategory);
         setProducts(foundProducts);
       } catch (err) {
-        if (err instanceof Error && err.name === "AbortError") {
-          return;
-        }
+        if (err instanceof Error && err.name === "AbortError") return;
 
         console.error("Category fetch error:", err);
         setError(true);
@@ -185,14 +165,14 @@ function CategoryPageContent() {
     return () => controller.abort();
   }, [slug]);
 
-  // Default order অপরিবর্তিত থাকবে।
-  // Ascending / descending-এ numeric price ব্যবহার হবে।
   const sortedProducts = useMemo(() => {
     const list = [...products];
 
     if (sort === "asc") {
       list.sort((a, b) => toNumber(a.today) - toNumber(b.today));
-    } else if (sort === "desc") {
+    }
+
+    if (sort === "desc") {
       list.sort((a, b) => toNumber(b.today) - toNumber(a.today));
     }
 
@@ -201,16 +181,18 @@ function CategoryPageContent() {
 
   if (loading) {
     return (
-      <main className="category-page">
-        <div className="category-container">
-          <div className="skeleton category-heading-skeleton" />
-          <div className="skeleton category-toolbar-skeleton" />
-
-          <p className="loading-text">পণ্যের তথ্য লোড হচ্ছে...</p>
-
-          <div className="product-grid">
+      <main className="min-h-screen bg-[#f0f5f0] px-4 py-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-5 h-24 animate-pulse rounded-2xl bg-white" />
+          <p className="mb-5 text-sm text-gray-500">
+            ক্যাটাগরির তথ্য লোড হচ্ছে...
+          </p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, index) => (
-              <div className="skeleton product-skeleton" key={index} />
+              <div
+                key={index}
+                className="h-32 animate-pulse rounded-xl bg-white"
+              />
             ))}
           </div>
         </div>
@@ -220,12 +202,20 @@ function CategoryPageContent() {
 
   if (error || !category) {
     return (
-      <main className="category-page">
-        <div className="category-container empty-state">
-          <div className="empty-icon">🛒</div>
-          <h1>ক্যাটাগরি খুঁজে পাওয়া যায়নি</h1>
-          <p>ক্যাটাগরির তথ্য আনতে সমস্যা হয়েছে। হোম পেজে ফিরে যাও।</p>
-          <Link href="/" className="home-button">
+      <main className="flex min-h-[60vh] items-center justify-center bg-[#f0f5f0] px-4 py-10">
+        <div className="w-full max-w-md rounded-2xl border border-[#e3eae3] bg-white p-8 text-center">
+          <div className="mb-3 text-5xl">🛒</div>
+          <h1 className="text-xl font-extrabold text-[#253027]">
+            ক্যাটাগরি খুঁজে পাওয়া যায়নি
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-gray-500">
+            ক্যাটাগরির তথ্য আনতে সমস্যা হয়েছে। আবার চেষ্টা করো অথবা হোম পেজে
+            ফিরে যাও।
+          </p>
+          <Link
+            href="/"
+            className="mt-5 inline-flex rounded-lg bg-green-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-green-800"
+          >
             হোম পেজে ফিরে যান
           </Link>
         </div>
@@ -235,12 +225,19 @@ function CategoryPageContent() {
 
   if (products.length === 0) {
     return (
-      <main className="category-page">
-        <div className="category-container empty-state">
-          <div className="empty-icon">{category.icon || "🛒"}</div>
-          <h1>এই ক্যাটাগরিতে কোনো পণ্য নেই</h1>
-          <p>অন্য পণ্য দেখতে হোম পেজে ফিরে যাও।</p>
-          <Link href="/" className="home-button">
+      <main className="flex min-h-[60vh] items-center justify-center bg-[#f0f5f0] px-4 py-10">
+        <div className="w-full max-w-md rounded-2xl border border-[#e3eae3] bg-white p-8 text-center">
+          <div className="mb-3 text-5xl">{category.icon || "🛒"}</div>
+          <h1 className="text-xl font-extrabold text-[#253027]">
+            এই ক্যাটাগরিতে কোনো পণ্য নেই
+          </h1>
+          <p className="mt-2 text-sm text-gray-500">
+            অন্য পণ্য দেখতে হোম পেজে ফিরে যাও।
+          </p>
+          <Link
+            href="/"
+            className="mt-5 inline-flex rounded-lg bg-green-700 px-5 py-3 text-sm font-bold text-white hover:bg-green-800"
+          >
             হোম পেজে ফিরে যান
           </Link>
         </div>
@@ -249,94 +246,117 @@ function CategoryPageContent() {
   }
 
   return (
-    <main className="category-page">
-      <div className="category-container">
-        {/* Category heading */}
-        <header className="category-heading">
-          <span className="category-icon">{category.icon || "🛒"}</span>
+    <main className="min-h-screen bg-[#f0f5f0] px-3 py-6 sm:px-5 sm:py-8">
+      <div className="mx-auto max-w-7xl space-y-6 sm:space-y-8">
+        <header className="flex items-center gap-4 rounded-2xl border border-[#e3eae3] bg-[#fafcf9] p-5 sm:p-7">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#eaf4eb] text-4xl sm:h-20 sm:w-20 sm:text-5xl">
+            {category.icon || "🛒"}
+          </div>
 
-          <div>
-            <h1>{category.nameBn}</h1>
-            <p>প্রতিদিনের বাজারের পণ্যের দাম ও পরিবর্তন</p>
+          <div className="min-w-0">
+            <h1 className="text-xl font-extrabold text-[#253027] sm:text-3xl">
+              {category.nameBn}
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              প্রতিদিনের বাজারের পণ্যের দাম ও পরিবর্তন
+            </p>
           </div>
         </header>
 
-        {/* Sorting */}
-        <div className="category-toolbar">
-          <span>সাজান</span>
-
-          <div className="sort-wrapper">
-            <select
-              aria-label="পণ্য সাজান"
-              value={sort}
-              onChange={(event) => setSort(event.target.value as SortOption)}
-            >
-              <option value="default">ডিফল্ট</option>
-              <option value="asc">দাম: কম থেকে বেশি</option>
-              <option value="desc">দাম: বেশি থেকে কম</option>
-            </select>
+        <section className="flex flex-col gap-3 rounded-xl border border-[#e3eae3] bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div>
+            <h2 className="font-bold text-[#253027]">পণ্য সাজান</h2>
+            <p className="mt-1 text-xs text-gray-500">
+              মোট {formatNumber(sortedProducts.length)}টি পণ্য
+            </p>
           </div>
-        </div>
 
-        <p className="product-count">
-          মোট {formatNumber(sortedProducts.length)}
-          টি পণ্য দেখানো হচ্ছে
-        </p>
+          <select
+            aria-label="পণ্য সাজান"
+            value={sort}
+            onChange={(event) => setSort(event.target.value as SortOption)}
+            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100 sm:w-64"
+          >
+            <option value="default">ডিফল্ট</option>
+            <option value="asc">দাম: কম থেকে বেশি</option>
+            <option value="desc">দাম: বেশি থেকে কম</option>
+          </select>
+        </section>
 
-        {/* Product cards */}
-        <div className="product-grid">
-          {sortedProducts.map((product) => {
-            const change = getChange(product);
+        <section>
+          <h2 className="mb-4 text-lg font-extrabold text-[#253027]">
+            {category.nameBn} — সব পণ্য
+          </h2>
 
-            return (
-              <Link
-                href={`/product/${product.slug || product.id}`}
-                className="product-card"
-                key={product.id}
-              >
-                <div className="product-title-row">
-                  <span className="product-icon">
-                    {product.categoryIcon || category.icon || "🛒"}
-                  </span>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {sortedProducts.map((product) => {
+              const change = getChange(product);
 
-                  <div>
-                    <h2>{product.nameBn}</h2>
-                    <p>{product.unit || "প্রতি একক"}</p>
+              return (
+                <Link
+                  href={`/product/${product.slug || product.id}`}
+                  className="group rounded-xl border border-[#e3eae3] bg-[#fafcf9] p-4 transition hover:-translate-y-0.5 hover:border-green-300 hover:shadow-md"
+                  key={product.id}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#edf4ed] text-2xl">
+                      {product.categoryIcon || category.icon || "🛒"}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate font-bold text-[#273129] group-hover:text-green-700">
+                        {product.nameBn}
+                      </h3>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {product.unit || "প্রতি একক"}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="price-row">
-                  <div>
-                    <span className="price-label">আজকের দাম</span>
+                  <div className="mt-5 flex items-end justify-between gap-2">
+                    <div>
+                      <p className="text-xs text-gray-500">আজকের দাম</p>
+                      <p className="mt-1 text-base font-extrabold text-[#218b45]">
+                        {formatNumber(product.today)} টাকা
+                      </p>
+                    </div>
 
-                    <p className="product-price">
-                      {formatNumber(product.today)} টাকা
-                    </p>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1.5 text-xs font-bold ${
+                        change.type === "up"
+                          ? "bg-red-50 text-red-600"
+                          : change.type === "down"
+                            ? "bg-green-50 text-green-700"
+                            : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {change.text}
+                    </span>
                   </div>
 
-                  <span className={`change-badge ${change.type}`}>
-                    {change.text}
-                  </span>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+                  <div className="mt-4 border-t border-gray-100 pt-3 text-xs font-semibold text-green-700">
+                    বিস্তারিত দেখুন →
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
       </div>
     </main>
   );
 }
 
-// Suspense fallback এবং মূল page।
 export default function CategoryPage() {
   return (
     <Suspense
       fallback={
-        <main className="category-page">
-          <div className="category-container">
-            <div className="skeleton category-heading-skeleton" />
-            <div className="skeleton category-toolbar-skeleton" />
-            <p className="loading-text">ক্যাটাগরির তথ্য লোড হচ্ছে...</p>
+        <main className="min-h-screen bg-[#f0f5f0] px-4 py-8">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-5 h-24 animate-pulse rounded-2xl bg-white" />
+            <p className="text-sm text-gray-500">
+              ক্যাটাগরির তথ্য লোড হচ্ছে...
+            </p>
           </div>
         </main>
       }

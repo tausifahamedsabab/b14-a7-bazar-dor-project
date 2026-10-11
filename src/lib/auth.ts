@@ -1,11 +1,15 @@
 import { betterAuth } from "better-auth";
 import Database from "better-sqlite3";
+import path from "node:path";
 
-const database = new Database("./sqlite.db");
+const databasePath = path.join(process.cwd(), "sqlite.db");
+const database = new Database(databasePath);
 
 export const auth = betterAuth({
   appName: "Bazar Dor",
-  baseURL: process.env.BETTER_AUTH_URL,
+
+  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+
   secret: process.env.BETTER_AUTH_SECRET,
 
   database,

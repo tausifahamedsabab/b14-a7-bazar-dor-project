@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
+import Image from "next/image";
 export const instant = false;
-
 
 const API_URL = "https://openapi.programming-hero.com/api/bazardor";
 
@@ -190,8 +190,27 @@ export default async function ProductDetailsPage({
         {/* Product summary */}
         <section className="rounded-2xl border border-[#e3eae3] bg-[#fafcf9] p-5 sm:p-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-[#edf4ed] text-5xl">
-              {product.image || product.categoryIcon || "🛒"}
+            <div className="relative flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#e3eae3] bg-white p-3 sm:h-40 sm:w-40">
+              {product.image &&
+              (product.image.startsWith("https://") ||
+                product.image.startsWith("http://")) ? (
+                <Image
+                  src={product.image}
+                  alt={product.nameBn}
+                  fill
+                  unoptimized
+                  sizes="(max-width: 640px) 128px, 160px"
+                  className="object-contain p-3"
+                />
+              ) : (
+                <span
+                  className="text-5xl"
+                  role="img"
+                  aria-label={product.nameBn}
+                >
+                  {product.categoryIcon || "🛒"}
+                </span>
+              )}
             </div>
 
             <div className="min-w-0 flex-1">
