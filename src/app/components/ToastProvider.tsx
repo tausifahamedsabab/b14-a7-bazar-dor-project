@@ -7,7 +7,7 @@ export default function ToastProvider() {
     <Toaster
       position="top-right"
       toastOptions={{
-        duration: 3000,
+        duration: 5000,
         style: {
           borderRadius: "12px",
           background: "#202a22",
@@ -15,16 +15,10 @@ export default function ToastProvider() {
           padding: "12px 16px",
         },
         success: {
-          iconTheme: {
-            primary: "#16a34a",
-            secondary: "#fff",
-          },
+          duration: 5000,
         },
         error: {
-          iconTheme: {
-            primary: "#dc2626",
-            secondary: "#fff",
-          },
+          duration: 5000,
         },
       }}
     />

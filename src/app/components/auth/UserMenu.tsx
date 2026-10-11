@@ -3,32 +3,46 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { toast } from "sonner";
-import { authClient } from "../../../lib/auth-client";
+import toast from "react-hot-toast";
+import { authClient } from "@/lib/auth-client";
 
 export default function UserMenu() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
+
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleLogout() {
+    if (loading) return;
+
     setLoading(true);
 
     try {
       const result = await authClient.signOut();
 
       if (result.error) {
-        toast.error(result.error.message || "Logout করা যায়নি");
+        toast.error(result.error.message || "সাইন আউট করা যায়নি", {
+          duration: 5000,
+        });
         return;
       }
 
-      toast.success("সফলভাবে Logout হয়েছে");
       setOpen(false);
+
+      // Toast দেখাও
+      toast.success("সফলভাবে সাইন আউট হয়েছে!", {
+        duration: 5000,
+        id: "logout-success",
+      });
+
+      // Toast দেখানোর পর হোম পেজে যাও
       router.replace("/");
       router.refresh();
     } catch {
-      toast.error("Logout করার সময় সমস্যা হয়েছে");
+      toast.error("সাইন আউট করার সময় সমস্যা হয়েছে", {
+        duration: 5000,
+      });
     } finally {
       setLoading(false);
     }

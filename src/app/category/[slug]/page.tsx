@@ -72,6 +72,16 @@ function formatNumber(value: number | string | undefined): string {
   });
 }
 
+function getProductEmoji(product: Product): string {
+  const image = (product as Product & { image?: unknown }).image;
+
+  if (typeof image === "string" && image.trim()) {
+    return image;
+  }
+
+  return product.categoryIcon || "🛒";
+}
+
 function getChange(product: Product) {
   const direction = product.change?.dir?.toLowerCase();
   const percentage = toNumber(product.change?.pct);
@@ -299,8 +309,14 @@ function CategoryPageContent() {
                   key={product.id}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#edf4ed] text-2xl">
-                      {product.categoryIcon || category.icon || "🛒"}
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-[#e1eae0] bg-gradient-to-br from-[#f3f8f0] to-[#e5f0e2] shadow-sm">
+                      <span
+                        className="text-4xl"
+                        role="img"
+                        aria-label={product.nameBn}
+                      >
+                        {getProductEmoji(product)}
+                      </span>
                     </div>
 
                     <div className="min-w-0 flex-1">
